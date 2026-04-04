@@ -1,4 +1,36 @@
-// Storage helpers
+// ── URL filter helpers (duplicated from background.js intentionally — popup
+//    syncs DNR directly so rules apply immediately without depending on the
+//    background service worker being alive) ──────────────────────────────────
+
+function patternToUrlFilter(pattern, matchType) {
+  const escaped = pattern.replace(/\*/g, '\\*').replace(/\^/g, '\\^');
+  return matchType === 'exact' ? '|' + escaped + '|' : '|' + escaped;
+}
+
+async function syncToDNR(rules) {
+  const existing = await browser.declarativeNetRequest.getDynamicRules();
+  const removeRuleIds = existing.map(r => r.id);
+
+  const addRules = rules
+    .filter(r => r.enabled)
+    .map(r => ({
+      id: r.id,
+      priority: 1,
+      condition: {
+        urlFilter: patternToUrlFilter(r.pattern, r.matchType),
+        resourceTypes: ['main_frame'],
+      },
+      action: {
+        type: 'redirect',
+        redirect: { url: r.destination },
+      },
+    }));
+
+  await browser.declarativeNetRequest.updateDynamicRules({ removeRuleIds, addRules });
+}
+
+// ── Storage helpers ───────────────────────────────────────────────────────────
+
 async function loadRules() {
   const result = await browser.storage.local.get('redirectRules');
   return result.redirectRules ?? [];
@@ -6,7 +38,8 @@ async function loadRules() {
 
 async function saveRules(rules) {
   await browser.storage.local.set({ redirectRules: rules });
-  await browser.runtime.sendMessage({ type: 'sync-rules' });
+  // Sync to DNR directly — don't rely on background receiving a message.
+  await syncToDNR(rules);
 }
 
 async function nextId() {
@@ -16,8 +49,8 @@ async function nextId() {
   return id;
 }
 
-// Validate that a string is a usable http/https URL.
-// Returns an error message string, or null if valid.
+// ── Validation ────────────────────────────────────────────────────────────────
+
 function urlError(value, fieldName) {
   if (!value) return `${fieldName} is required.`;
   try {
@@ -31,7 +64,7 @@ function urlError(value, fieldName) {
   return null;
 }
 
-// ── Rendering ────────────────────────────────────────────────────────────────
+// ── Rendering ─────────────────────────────────────────────────────────────────
 
 function truncate(str, max = 38) {
   return str.length > max ? str.slice(0, max - 1) + '\u2026' : str;
@@ -58,8 +91,7 @@ function renderRules(rules) {
   empty.hidden = true;
 
   rules.forEach(rule => {
-    const row = buildRuleRow(rule);
-    list.appendChild(row);
+    list.appendChild(buildRuleRow(rule));
   });
 }
 

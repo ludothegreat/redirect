@@ -1,35 +1,22 @@
-// In Chrome MV3 the background runs as a service worker, so browser-polyfill
-// is not loaded via the manifest scripts array. Import it here when needed.
-if (typeof browser === 'undefined') {
-  importScripts('browser-polyfill.js');
-}
+// Chrome MV3 uses a service worker where browser.* isn't natively available.
+// Firefox has browser.* natively. Use whichever is present.
+const api = globalThis.browser ?? globalThis.chrome;
 
-// Convert a user-supplied URL pattern and match type into a declarativeNetRequest
-// urlFilter string.
-//
-// urlFilter special characters:
-//   |  at start = URL must start with following string
-//   |  at end   = URL must end with preceding string
-//   *            = wildcard (any sequence of characters)
-//   ^            = separator anchor (any non-letter/digit/underscore/-/./%)
-//
-// We escape * and ^ in user input so they are treated as literals.
 function patternToUrlFilter(pattern, matchType) {
+  // Escape * and ^ which have special meaning in declarativeNetRequest urlFilter syntax.
   const escaped = pattern.replace(/\*/g, '\\*').replace(/\^/g, '\\^');
-  if (matchType === 'exact') {
-    return '|' + escaped + '|';
-  }
-  // prefix: match any URL starting with this string
-  return '|' + escaped;
+  // | at start = URL must begin with this string
+  // | at end   = URL must end with this string
+  return matchType === 'exact' ? '|' + escaped + '|' : '|' + escaped;
 }
 
 async function loadRules() {
-  const result = await browser.storage.local.get('redirectRules');
+  const result = await api.storage.local.get('redirectRules');
   return result.redirectRules ?? [];
 }
 
 async function syncRulesToDNR(rules) {
-  const existing = await browser.declarativeNetRequest.getDynamicRules();
+  const existing = await api.declarativeNetRequest.getDynamicRules();
   const removeRuleIds = existing.map(r => r.id);
 
   const addRules = rules
@@ -47,20 +34,20 @@ async function syncRulesToDNR(rules) {
       },
     }));
 
-  await browser.declarativeNetRequest.updateDynamicRules({ removeRuleIds, addRules });
+  await api.declarativeNetRequest.updateDynamicRules({ removeRuleIds, addRules });
 }
 
-browser.runtime.onStartup.addListener(async () => {
+api.runtime.onStartup.addListener(async () => {
   const rules = await loadRules();
   await syncRulesToDNR(rules);
 });
 
-browser.runtime.onInstalled.addListener(async () => {
+api.runtime.onInstalled.addListener(async () => {
   const rules = await loadRules();
   await syncRulesToDNR(rules);
 });
 
-browser.runtime.onMessage.addListener(async msg => {
+api.runtime.onMessage.addListener(async msg => {
   if (msg.type === 'sync-rules') {
     const rules = await loadRules();
     await syncRulesToDNR(rules);
