@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Redirector",
+  "version": "1.0.0",
+  "description": "Redirect URLs to your preferred destinations.",
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png"
+    },
+    "default_title": "Redirector"
+  },
+
+  "background": {
+    "scripts": ["browser-polyfill.js", "background.js"],
+    "service_worker": "background.js"
+  },
+
+  "permissions": [
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback",
+    "storage"
+  ],
+
+  "host_permissions": ["<all_urls>"],
+
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "empty_ruleset",
+        "enabled": true,
+        "path": "rules/empty.json"
+      }
+    ]
+  },
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "redirector@local",
+      "strict_min_version": "113.0"
+    }
+  },
+
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

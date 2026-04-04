@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img src="icons/icon-16.png" alt="" class="logo">
+    <span class="app-title">Redirector</span>
+  </header>
+
+  <main>
+    <div id="rule-list">
+      <!-- Rules rendered here by popup.js -->
+    </div>
+
+    <div id="empty-state" hidden>
+      <p>No redirect rules yet.</p>
+      <p class="hint">Add one below to get started.</p>
+    </div>
+  </main>
+
+  <footer>
+    <div class="add-rule-section">
+      <div class="section-label">Add rule</div>
+      <form id="add-rule-form" autocomplete="off">
+        <div class="field-row">
+          <label for="input-pattern">From</label>
+          <input id="input-pattern" type="url" placeholder="https://example.com/" required>
+        </div>
+        <div class="field-row match-row">
+          <label for="input-match-type">Match</label>
+          <select id="input-match-type">
+            <option value="exact">Exact URL</option>
+            <option value="prefix">Starts with</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <label for="input-destination">To</label>
+          <input id="input-destination" type="url" placeholder="https://example.com/preferred" required>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Add Rule</button>
+        </div>
+      </form>
+    </div>
+  </footer>
+
+  <script src="browser-polyfill.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
