@@ -1,0 +1,12 @@
+# AI assistant context
+CLAUDE.md
+HANDOFF.md
+
+# Generated knowledge base
+docs/learn/
+
+# Scratch / debugging
+debugging/
+
+# Browser-generated runtime metadata
+redirect-extension/_metadata/
