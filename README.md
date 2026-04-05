@@ -72,4 +72,4 @@ Rules are stored in `browser.storage.local` and persist across browser sessions.
 
 ## License
 
-MIT
+[MIT](LICENSE)
