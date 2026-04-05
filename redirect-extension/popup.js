@@ -75,13 +75,11 @@ async function nextId() {
 // ── Validation ────────────────────────────────────────────────────────────────
 
 // Canonical form: prepend https:// if no scheme, then normalize via URL parser.
-// useHttp forces the scheme to http:// (for source pattern matching).
-// When useHttp is undefined, the user's scheme is preserved as-is.
+// useHttp forces http:// when true, https:// when false.
 function normalizeUrl(raw, useHttp) {
   if (!/^https?:\/\//i.test(raw)) raw = 'https://' + raw;
   const url = new URL(raw);
-  if (useHttp === true) url.protocol = 'http:';
-  else if (useHttp === false) url.protocol = 'https:';
+  url.protocol = useHttp ? 'http:' : 'https:';
   return url.href;
 }
 
@@ -247,7 +245,7 @@ function showEditForm(rule, row) {
   httpRow.appendChild(httpSpan);
 
   patternInput.addEventListener('blur', () => normalizeUrlInput(patternInput, httpCheckbox.checked));
-  destInput.addEventListener('blur', () => normalizeUrlInput(destInput));
+  destInput.addEventListener('blur', () => normalizeUrlInput(destInput, httpCheckbox.checked));
 
   const errorEl = document.createElement('div');
   errorEl.className = 'field-error';
@@ -294,7 +292,7 @@ function showEditForm(rule, row) {
 
     const useHttp = httpCheckbox.checked;
     const pattern = normalizeUrl(rawPattern, useHttp);
-    const destination = normalizeUrl(rawDest);
+    const destination = normalizeUrl(rawDest, useHttp);
 
     const rules = await loadRules();
     const idx = rules.findIndex(r => r.id === rule.id);
@@ -350,7 +348,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   patternInput.addEventListener('blur', () => { normalizeUrlInput(patternInput, httpCheckbox.checked); updateMatchPreview(); });
-  destInput.addEventListener('blur', () => normalizeUrlInput(destInput));
+  destInput.addEventListener('blur', () => normalizeUrlInput(destInput, httpCheckbox.checked));
   matchSelect.addEventListener('change', updateMatchPreview);
 
   const errorEl = document.createElement('div');
@@ -372,7 +370,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const useHttp = httpCheckbox.checked;
     const pattern = normalizeUrl(rawPattern, useHttp);
-    const destination = normalizeUrl(rawDest);
+    const destination = normalizeUrl(rawDest, useHttp);
 
     const id = await nextId();
     const existingRules = await loadRules();
