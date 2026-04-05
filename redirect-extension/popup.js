@@ -76,10 +76,10 @@ async function nextId() {
 
 // Canonical form: prepend https:// if no scheme, upgrade http→https unless
 // allowHttp is true, then normalize via URL parser.
-function normalizeUrl(raw, allowHttp) {
+function normalizeUrl(raw, useHttp) {
   if (!/^https?:\/\//i.test(raw)) raw = 'https://' + raw;
   const url = new URL(raw);
-  if (!allowHttp && url.protocol === 'http:') url.protocol = 'https:';
+  url.protocol = useHttp ? 'http:' : 'https:';
   return url.href;
 }
 
@@ -240,7 +240,7 @@ function showEditForm(rule, row) {
   httpCheckbox.type = 'checkbox';
   httpCheckbox.checked = isHttp;
   const httpSpan = document.createElement('span');
-  httpSpan.textContent = 'Allow HTTP (insecure)';
+  httpSpan.textContent = 'Set HTTP (insecure)';
   httpRow.appendChild(httpCheckbox);
   httpRow.appendChild(httpSpan);
 
@@ -290,9 +290,9 @@ function showEditForm(rule, row) {
     }
     errorEl.textContent = '';
 
-    const allowHttp = httpCheckbox.checked;
-    const pattern = normalizeUrl(rawPattern, allowHttp);
-    const destination = normalizeUrl(rawDest, allowHttp);
+    const useHttp = httpCheckbox.checked;
+    const pattern = normalizeUrl(rawPattern, useHttp);
+    const destination = normalizeUrl(rawDest, useHttp);
 
     const rules = await loadRules();
     const idx = rules.findIndex(r => r.id === rule.id);
@@ -336,7 +336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const matchSelect = document.getElementById('input-match-type');
   const destInput = document.getElementById('input-destination');
   const matchPreview = document.getElementById('match-preview');
-  const allowHttpCheckbox = document.getElementById('input-allow-http');
+  const httpCheckbox = document.getElementById('input-use-http');
 
   function updateMatchPreview() {
     const val = patternInput.value;
@@ -347,8 +347,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     matchPreview.hidden = false;
   }
 
-  patternInput.addEventListener('blur', () => { normalizeUrlInput(patternInput, allowHttpCheckbox.checked); updateMatchPreview(); });
-  destInput.addEventListener('blur', () => normalizeUrlInput(destInput, allowHttpCheckbox.checked));
+  patternInput.addEventListener('blur', () => { normalizeUrlInput(patternInput, httpCheckbox.checked); updateMatchPreview(); });
+  destInput.addEventListener('blur', () => normalizeUrlInput(destInput, httpCheckbox.checked));
   matchSelect.addEventListener('change', updateMatchPreview);
 
   const errorEl = document.createElement('div');
@@ -368,9 +368,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     errorEl.textContent = '';
 
-    const allowHttp = allowHttpCheckbox.checked;
-    const pattern = normalizeUrl(rawPattern, allowHttp);
-    const destination = normalizeUrl(rawDest, allowHttp);
+    const useHttp = httpCheckbox.checked;
+    const pattern = normalizeUrl(rawPattern, useHttp);
+    const destination = normalizeUrl(rawDest, useHttp);
 
     const id = await nextId();
     const existingRules = await loadRules();
