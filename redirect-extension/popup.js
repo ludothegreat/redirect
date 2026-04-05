@@ -54,8 +54,9 @@ async function nextId() {
 // Rewrite input value to its canonical form so what the user sees matches what
 // gets stored. Silently skips invalid URLs — submit validation catches those.
 function normalizeUrlInput(input) {
-  const raw = input.value.trim();
+  let raw = input.value.trim();
   if (!raw) return;
+  if (!/^https?:\/\//i.test(raw)) raw = 'https://' + raw;
   try { input.value = new URL(raw).href; } catch { /* leave it, validator will complain */ }
 }
 
@@ -193,13 +194,13 @@ function showEditForm(rule, row) {
   form.className = 'edit-form';
   form.autocomplete = 'off';
 
-  const patternInput = makeInput('url', rule.pattern, 'https://example.com/', true);
+  const patternInput = makeInput('text', rule.pattern, 'facebook.com or https://example.com/', true);
   patternInput.addEventListener('blur', () => normalizeUrlInput(patternInput));
   const matchSelect = makeSelect(
     [{ value: 'exact', label: 'Exact URL' }, { value: 'prefix', label: 'Starts with' }],
     rule.matchType
   );
-  const destInput = makeInput('url', rule.destination, 'https://example.com/preferred', true);
+  const destInput = makeInput('text', rule.destination, 'https://example.com/preferred', true);
   destInput.addEventListener('blur', () => normalizeUrlInput(destInput));
 
   const errorEl = document.createElement('div');
