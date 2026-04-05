@@ -30,14 +30,14 @@ Click the Redirector icon in the toolbar to open the popup.
 
 1. Enter the source URL in the **From** field
 2. Select a match type:
-   - **Exact URL** — redirects only when the full URL matches
-   - **Starts with** — redirects any URL that begins with the pattern
+   - **Exact URL** - redirects only when the full URL matches
+   - **Starts with** - redirects any URL that begins with the pattern
 3. Enter the destination URL in the **To** field
 4. Click **Add Rule**
 
 ### URL normalization
 
-- Bare domains are accepted — `facebook.com` automatically becomes `https://facebook.com/`
+- Bare domains are accepted - `facebook.com` automatically becomes `https://facebook.com/`
 - Trailing slashes and URL formatting are normalized on input
 - Both `www` and non-`www` variants are matched automatically
 - A match preview is shown below the form so you can verify what will be matched before saving
@@ -48,16 +48,16 @@ Check this box when creating rules for local or non-HTTPS services (e.g. `http:/
 
 ### Managing rules
 
-- **Toggle** — enable or disable a rule with the switch
-- **Edit** — hover over a rule and click ✎
-- **Delete** — hover over a rule and click ✕
+- **Toggle** - enable or disable a rule with the switch
+- **Edit** - hover over a rule and click ✎
+- **Delete** - hover over a rule and click ✕
 
 ## How it works
 
 Redirector uses two mechanisms to catch navigations:
 
-- **declarativeNetRequest** — intercepts standard HTTP navigations (typed URLs, links, page loads)
-- **webNavigation** — intercepts SPA navigations that use the History API (e.g. `history.pushState`)
+- **declarativeNetRequest** - intercepts standard HTTP navigations (typed URLs, links, page loads)
+- **webNavigation** - intercepts SPA navigations that use the History API (e.g. `history.pushState`)
 
 Rules are stored in `browser.storage.local` and persist across browser sessions.
 
