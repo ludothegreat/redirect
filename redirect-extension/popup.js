@@ -74,19 +74,21 @@ async function nextId() {
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-// Canonical form: prepend https:// if no scheme, upgrade http→https unless
-// allowHttp is true, then normalize via URL parser.
+// Canonical form: prepend https:// if no scheme, then normalize via URL parser.
+// useHttp forces the scheme to http:// (for source pattern matching).
+// When useHttp is undefined, the user's scheme is preserved as-is.
 function normalizeUrl(raw, useHttp) {
   if (!/^https?:\/\//i.test(raw)) raw = 'https://' + raw;
   const url = new URL(raw);
-  url.protocol = useHttp ? 'http:' : 'https:';
+  if (useHttp === true) url.protocol = 'http:';
+  else if (useHttp === false) url.protocol = 'https:';
   return url.href;
 }
 
-function normalizeUrlInput(input, allowHttp) {
+function normalizeUrlInput(input, useHttp) {
   const raw = input.value.trim();
   if (!raw) return;
-  try { input.value = normalizeUrl(raw, allowHttp); } catch { /* validator will complain */ }
+  try { input.value = normalizeUrl(raw, useHttp); } catch { /* validator will complain */ }
 }
 
 function urlError(value, fieldName) {
@@ -245,7 +247,7 @@ function showEditForm(rule, row) {
   httpRow.appendChild(httpSpan);
 
   patternInput.addEventListener('blur', () => normalizeUrlInput(patternInput, httpCheckbox.checked));
-  destInput.addEventListener('blur', () => normalizeUrlInput(destInput, httpCheckbox.checked));
+  destInput.addEventListener('blur', () => normalizeUrlInput(destInput));
 
   const errorEl = document.createElement('div');
   errorEl.className = 'field-error';
@@ -292,7 +294,7 @@ function showEditForm(rule, row) {
 
     const useHttp = httpCheckbox.checked;
     const pattern = normalizeUrl(rawPattern, useHttp);
-    const destination = normalizeUrl(rawDest, useHttp);
+    const destination = normalizeUrl(rawDest);
 
     const rules = await loadRules();
     const idx = rules.findIndex(r => r.id === rule.id);
@@ -348,7 +350,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   patternInput.addEventListener('blur', () => { normalizeUrlInput(patternInput, httpCheckbox.checked); updateMatchPreview(); });
-  destInput.addEventListener('blur', () => normalizeUrlInput(destInput, httpCheckbox.checked));
+  destInput.addEventListener('blur', () => normalizeUrlInput(destInput));
   matchSelect.addEventListener('change', updateMatchPreview);
 
   const errorEl = document.createElement('div');
@@ -370,7 +372,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const useHttp = httpCheckbox.checked;
     const pattern = normalizeUrl(rawPattern, useHttp);
-    const destination = normalizeUrl(rawDest, useHttp);
+    const destination = normalizeUrl(rawDest);
 
     const id = await nextId();
     const existingRules = await loadRules();
