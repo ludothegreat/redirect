@@ -51,6 +51,14 @@ async function nextId() {
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
+// Rewrite input value to its canonical form so what the user sees matches what
+// gets stored. Silently skips invalid URLs — submit validation catches those.
+function normalizeUrlInput(input) {
+  const raw = input.value.trim();
+  if (!raw) return;
+  try { input.value = new URL(raw).href; } catch { /* leave it, validator will complain */ }
+}
+
 function urlError(value, fieldName) {
   if (!value) return `${fieldName} is required.`;
   try {
@@ -186,11 +194,13 @@ function showEditForm(rule, row) {
   form.autocomplete = 'off';
 
   const patternInput = makeInput('url', rule.pattern, 'https://example.com/', true);
+  patternInput.addEventListener('blur', () => normalizeUrlInput(patternInput));
   const matchSelect = makeSelect(
     [{ value: 'exact', label: 'Exact URL' }, { value: 'prefix', label: 'Starts with' }],
     rule.matchType
   );
   const destInput = makeInput('url', rule.destination, 'https://example.com/preferred', true);
+  destInput.addEventListener('blur', () => normalizeUrlInput(destInput));
 
   const errorEl = document.createElement('div');
   errorEl.className = 'field-error';
@@ -223,16 +233,21 @@ function showEditForm(rule, row) {
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
-    const pattern = patternInput.value.trim();
     const matchType = matchSelect.value;
-    const destination = destInput.value.trim();
+    const rawPattern = patternInput.value.trim();
+    const rawDest = destInput.value.trim();
 
-    const err = urlError(pattern, 'Source URL') || urlError(destination, 'Destination URL');
+    const err = urlError(rawPattern, 'Source URL') || urlError(rawDest, 'Destination URL');
     if (err) {
       errorEl.textContent = err;
       return;
     }
     errorEl.textContent = '';
+
+    // Normalize via URL parser so stored values match what browsers actually use
+    // (e.g. https://example.com → https://example.com/ with trailing slash).
+    const pattern = new URL(rawPattern).href;
+    const destination = new URL(rawDest).href;
 
     const rules = await loadRules();
     const idx = rules.findIndex(r => r.id === rule.id);
@@ -275,6 +290,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   const patternInput = document.getElementById('input-pattern');
   const matchSelect = document.getElementById('input-match-type');
   const destInput = document.getElementById('input-destination');
+  const matchPreview = document.getElementById('match-preview');
+
+  function updateMatchPreview() {
+    const val = patternInput.value;
+    if (!val) { matchPreview.hidden = true; return; }
+    matchPreview.textContent = matchSelect.value === 'exact'
+      ? 'Exact match: ' + val
+      : 'Starts with: ' + val;
+    matchPreview.hidden = false;
+  }
+
+  patternInput.addEventListener('blur', () => { normalizeUrlInput(patternInput); updateMatchPreview(); });
+  destInput.addEventListener('blur', () => normalizeUrlInput(destInput));
+  matchSelect.addEventListener('change', updateMatchPreview);
 
   const errorEl = document.createElement('div');
   errorEl.className = 'field-error';
@@ -282,16 +311,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
-    const pattern = patternInput.value.trim();
     const matchType = matchSelect.value;
-    const destination = destInput.value.trim();
+    const rawPattern = patternInput.value.trim();
+    const rawDest = destInput.value.trim();
 
-    const err = urlError(pattern, 'Source URL') || urlError(destination, 'Destination URL');
+    const err = urlError(rawPattern, 'Source URL') || urlError(rawDest, 'Destination URL');
     if (err) {
       errorEl.textContent = err;
       return;
     }
     errorEl.textContent = '';
+
+    // Normalize via URL parser so stored values match what browsers actually use
+    // (e.g. https://example.com → https://example.com/ with trailing slash).
+    const pattern = new URL(rawPattern).href;
+    const destination = new URL(rawDest).href;
 
     const id = await nextId();
     const existingRules = await loadRules();
