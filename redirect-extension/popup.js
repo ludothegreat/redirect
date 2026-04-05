@@ -51,19 +51,27 @@ async function nextId() {
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-// Rewrite input value to its canonical form so what the user sees matches what
-// gets stored. Silently skips invalid URLs — submit validation catches those.
-function normalizeUrlInput(input) {
-  let raw = input.value.trim();
-  if (!raw) return;
+// Canonical form: prepend https:// if no scheme, upgrade http→https unless
+// allowHttp is true, then normalize via URL parser.
+function normalizeUrl(raw, allowHttp) {
   if (!/^https?:\/\//i.test(raw)) raw = 'https://' + raw;
-  try { input.value = new URL(raw).href; } catch { /* leave it, validator will complain */ }
+  const url = new URL(raw);
+  if (!allowHttp && url.protocol === 'http:') url.protocol = 'https:';
+  return url.href;
+}
+
+function normalizeUrlInput(input, allowHttp) {
+  const raw = input.value.trim();
+  if (!raw) return;
+  try { input.value = normalizeUrl(raw, allowHttp); } catch { /* validator will complain */ }
 }
 
 function urlError(value, fieldName) {
   if (!value) return `${fieldName} is required.`;
   try {
-    const u = new URL(value);
+    let v = value;
+    if (!/^https?:\/\//i.test(v)) v = 'https://' + v;
+    const u = new URL(v);
     if (u.protocol !== 'http:' && u.protocol !== 'https:') {
       return `${fieldName} must start with http:// or https://`;
     }
@@ -194,14 +202,27 @@ function showEditForm(rule, row) {
   form.className = 'edit-form';
   form.autocomplete = 'off';
 
+  const isHttp = rule.pattern.startsWith('http://') || rule.destination.startsWith('http://');
+
   const patternInput = makeInput('text', rule.pattern, 'facebook.com or https://example.com/', true);
-  patternInput.addEventListener('blur', () => normalizeUrlInput(patternInput));
   const matchSelect = makeSelect(
     [{ value: 'exact', label: 'Exact URL' }, { value: 'prefix', label: 'Starts with' }],
     rule.matchType
   );
   const destInput = makeInput('text', rule.destination, 'https://example.com/preferred', true);
-  destInput.addEventListener('blur', () => normalizeUrlInput(destInput));
+
+  const httpRow = document.createElement('label');
+  httpRow.className = 'allow-http-label';
+  const httpCheckbox = document.createElement('input');
+  httpCheckbox.type = 'checkbox';
+  httpCheckbox.checked = isHttp;
+  const httpSpan = document.createElement('span');
+  httpSpan.textContent = 'Allow HTTP (insecure)';
+  httpRow.appendChild(httpCheckbox);
+  httpRow.appendChild(httpSpan);
+
+  patternInput.addEventListener('blur', () => normalizeUrlInput(patternInput, httpCheckbox.checked));
+  destInput.addEventListener('blur', () => normalizeUrlInput(destInput, httpCheckbox.checked));
 
   const errorEl = document.createElement('div');
   errorEl.className = 'field-error';
@@ -229,6 +250,7 @@ function showEditForm(rule, row) {
   form.appendChild(patternInput);
   form.appendChild(matchSelect);
   form.appendChild(destInput);
+  form.appendChild(httpRow);
   form.appendChild(errorEl);
   form.appendChild(btnRow);
 
@@ -245,10 +267,9 @@ function showEditForm(rule, row) {
     }
     errorEl.textContent = '';
 
-    // Normalize via URL parser so stored values match what browsers actually use
-    // (e.g. https://example.com → https://example.com/ with trailing slash).
-    const pattern = new URL(rawPattern).href;
-    const destination = new URL(rawDest).href;
+    const allowHttp = httpCheckbox.checked;
+    const pattern = normalizeUrl(rawPattern, allowHttp);
+    const destination = normalizeUrl(rawDest, allowHttp);
 
     const rules = await loadRules();
     const idx = rules.findIndex(r => r.id === rule.id);
@@ -292,6 +313,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const matchSelect = document.getElementById('input-match-type');
   const destInput = document.getElementById('input-destination');
   const matchPreview = document.getElementById('match-preview');
+  const allowHttpCheckbox = document.getElementById('input-allow-http');
 
   function updateMatchPreview() {
     const val = patternInput.value;
@@ -302,8 +324,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     matchPreview.hidden = false;
   }
 
-  patternInput.addEventListener('blur', () => { normalizeUrlInput(patternInput); updateMatchPreview(); });
-  destInput.addEventListener('blur', () => normalizeUrlInput(destInput));
+  patternInput.addEventListener('blur', () => { normalizeUrlInput(patternInput, allowHttpCheckbox.checked); updateMatchPreview(); });
+  destInput.addEventListener('blur', () => normalizeUrlInput(destInput, allowHttpCheckbox.checked));
   matchSelect.addEventListener('change', updateMatchPreview);
 
   const errorEl = document.createElement('div');
@@ -323,10 +345,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     errorEl.textContent = '';
 
-    // Normalize via URL parser so stored values match what browsers actually use
-    // (e.g. https://example.com → https://example.com/ with trailing slash).
-    const pattern = new URL(rawPattern).href;
-    const destination = new URL(rawDest).href;
+    const allowHttp = allowHttpCheckbox.checked;
+    const pattern = normalizeUrl(rawPattern, allowHttp);
+    const destination = normalizeUrl(rawDest, allowHttp);
 
     const id = await nextId();
     const existingRules = await loadRules();

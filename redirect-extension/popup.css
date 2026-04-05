@@ -276,6 +276,23 @@ footer {
   word-break: break-all;
 }
 
+.allow-http-row {
+  padding: 2px 0 4px 50px;
+}
+
+.allow-http-label {
+  font-size: 11px;
+  color: #6b6560;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.allow-http-label input[type="checkbox"] {
+  accent-color: #f97316;
+}
+
 .field-error {
   font-size: 11px;
   color: #f87171;
