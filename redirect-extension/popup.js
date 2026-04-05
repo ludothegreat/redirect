@@ -7,24 +7,47 @@ function patternToUrlFilter(pattern, matchType) {
   return matchType === 'exact' ? '|' + escaped + '|' : '|' + escaped;
 }
 
+function wwwVariant(url) {
+  try {
+    const u = new URL(url);
+    u.hostname = u.hostname.startsWith('www.')
+      ? u.hostname.slice(4)
+      : 'www.' + u.hostname;
+    return u.href;
+  } catch { return null; }
+}
+
+const WWW_ID_OFFSET = 100000;
+
 async function syncToDNR(rules) {
   const existing = await browser.declarativeNetRequest.getDynamicRules();
   const removeRuleIds = existing.map(r => r.id);
 
-  const addRules = rules
-    .filter(r => r.enabled)
-    .map(r => ({
+  const addRules = [];
+  for (const r of rules) {
+    if (!r.enabled) continue;
+    addRules.push({
       id: r.id,
       priority: 1,
       condition: {
         urlFilter: patternToUrlFilter(r.pattern, r.matchType),
         resourceTypes: ['main_frame'],
       },
-      action: {
-        type: 'redirect',
-        redirect: { url: r.destination },
-      },
-    }));
+      action: { type: 'redirect', redirect: { url: r.destination } },
+    });
+    const variant = wwwVariant(r.pattern);
+    if (variant) {
+      addRules.push({
+        id: r.id + WWW_ID_OFFSET,
+        priority: 1,
+        condition: {
+          urlFilter: patternToUrlFilter(variant, r.matchType),
+          resourceTypes: ['main_frame'],
+        },
+        action: { type: 'redirect', redirect: { url: r.destination } },
+      });
+    }
+  }
 
   await browser.declarativeNetRequest.updateDynamicRules({ removeRuleIds, addRules });
 }
